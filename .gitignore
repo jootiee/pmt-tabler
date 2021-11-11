@@ -1,6 +1,11 @@
-tables/*
 ui/
 venv/
+.gitignore
+debug.py
+main1.py
+.DS_Store
+
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
