@@ -55,7 +55,7 @@ class Tabler:
         
         self.cur.execute("""
         CREATE TABLE repr(
-        '1' STRING
+        Team STRING
         )
         """)
 
@@ -64,40 +64,92 @@ class Tabler:
         INSERT INTO TEAMS(NAME) VALUES(?)
         """, (name, ))
         
-        self.con.commit()
+        teams = sorted(list(set([elem[0] for elem in 
+        self.cur.execute("""
+        SELECT ID FROM TEAMS
+        """)]) - set([elem[0] for elem in 
+        self.cur.execute("""
+        SELECT ID FROM GRID
+        """)])))
 
-    def add_player(self, name="unknown", team="asdlkjnassdkalshdf"):
-        res = self.cur.execute(f"""
+        self.add_to_grid(teams)
+
+    def add_player(self, name="unknown", team="unknown"):
+        id = self.cur.execute(f"""
         SELECT ID FROM TEAMS WHERE NAME = ?
         """, (team, )).fetchall()[0][0]
 
         self.cur.execute(f"""
         INSERT INTO PLAYERS(NAME, TEAM) VALUES(?, ?)
-        """, (name, res))
+        """, (name, id))
 
         self.con.commit()
 
     def create_grid(self):
-        teams = self.cur.execute("""
+        teams = [team[0] for team in 
+        self.cur.execute("""
         SELECT ID FROM TEAMS
-        """).fetchall()
+        """).fetchall()]
 
+        self.add_to_grid(teams)
+
+    def add_to_grid(self, teams):
         for team in teams:
             self.cur.execute(f"""
-            ALTER TABLE GRID ADD '{team[0]}' STRING;
+            ALTER TABLE GRID ADD '{team}' STRING;
             """)
 
             self.cur.execute(f"""
-            INSERT INTO GRID('{team[0]}') VALUES('x');
+            INSERT INTO GRID('{team}') VALUES('x');
             """)
 
             self.con.commit()
 
-    def add_to_grid(self):
-        
+    def preview_grid(self):
+        self.cur.execute("""
+        DROP TABLE repr
+        """)
+
+        rows = [row for row in 
+        self.cur.execute("""
+        SELECT * FROM GRID
+        """)]
+
+
+        teams = [team[0] for team in 
+        self.cur.execute("""
+        SELECT NAME FROM TEAMS
+        """).fetchall()]
+
+        cmd_teams = " STRING, ".join(teams) + " STRING"
+
+        self.cur.execute("""
+        CREATE TABLE repr(
+        Team STRING, {}
+        )
+        """.format(cmd_teams))
+
+        for rows_index, row in enumerate(rows):
+            values = list()
+            for index, elem in enumerate(row):
+                if index:
+                    if elem:
+                        values.append(elem)
+                    else:
+                        values.append("—")
+                else:
+                    values.append(teams[rows_index])
+
+            self.cur.execute("""
+            INSERT INTO REPR(Team, {}) VALUES({})
+            """.format(", ".join(teams), ", ".join([f"'{elem}'" for elem in values])))
+
+        self.con.commit()
 
 if __name__ == "__main__":
     tabler = Tabler()
     # tabler.create_table()
     # tabler.add_player()
-    tabler.create_grid()
+    # tabler.create_grid()
+    # tabler.add_team(name="seirin")
+    tabler.preview_grid()
