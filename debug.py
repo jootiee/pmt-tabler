@@ -1,48 +1,16 @@
 import sqlite3
-name = "tables/table1.db"
+name = "tables/table2.db"
 
 con = sqlite3.connect(name)
 cur = con.cursor()
 
-cur.execute("""
-DROP TABLE repr
-""")
+teams = [elem for elem in 
+        cur.execute("""
+        SELECT ID, NAME, SCORE FROM PLAYERS WHERE TEAM LIKE ?
+        """, [1]).fetchall()]
 
-rows = [row for row in 
-cur.execute("""
-SELECT * FROM GRID
-""")]
+print(teams)
 
-
-teams = [team[0] for team in 
-cur.execute("""
-SELECT NAME FROM TEAMS
-""").fetchall()]
-
-cmd_teams = " STRING, ".join(teams) + " STRING"
-
-cur.execute("""
-CREATE TABLE repr(
-Team STRING, {}
-)
-""".format(cmd_teams))
-
-for rows_index, row in enumerate(rows):
-    values = list()
-    for index, elem in enumerate(row):
-        if index:
-            if elem:
-                values.append(elem)
-            else:
-                values.append("-")
-        else:
-            values.append(teams[rows_index])
-
-    cur.execute("""
-    INSERT INTO REPR(Team, {}) VALUES({})
-    """.format(", ".join(teams), ", ".join([f"'{elem}'" for elem in values])))
-
-con.commit()
 
 
 '''

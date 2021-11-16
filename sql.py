@@ -49,13 +49,20 @@ class Tabler:
         CREATE TABLE players(
         ID  INTEGER PRIMARY KEY AUTOINCREMENT,
         NAME STRING,
-        TEAM STRING
+        TEAM STRING,
+        TOUR1 INT
         );
         """)
         
         self.cur.execute("""
         CREATE TABLE repr(
         Team STRING
+        )
+        """)
+
+        self.cur.execute("""
+        CREATE TABLE  scores(
+        Team1 STRING; Score STRING, Team2 STRING
         )
         """)
 
@@ -105,7 +112,7 @@ class Tabler:
 
             self.con.commit()
 
-    def preview_grid(self):
+    def fill_table(self):
         self.cur.execute("""
         DROP TABLE repr
         """)
@@ -144,12 +151,39 @@ class Tabler:
             INSERT INTO REPR(Team, {}) VALUES({})
             """.format(", ".join(teams), ", ".join([f"'{elem}'" for elem in values])))
 
+        
+
         self.con.commit()
+
+    def get_teams(self):
+        teams = [elem[1] for elem in 
+        self.cur.execute("""
+        SELECT ID, NAME FROM TEAMS
+        """).fetchall()]
+
+        return teams
+
+    def get_players(self, team):
+        players = [elem for elem in 
+        self.cur.execute("""
+        SELECT ID, NAME, SCORE FROM PLAYERS WHERE TEAM LIKE ?
+        """, [team]).fetchall()]
+
+        return players
+
+    def change_score(self, player, score):
+        self.cur.execute("""
+        UPDATE PLAYERS
+        SET SCORE = ?
+        WHERE ID = ?
+        """, [score, player])
+        self.con.commit()
+
 
 if __name__ == "__main__":
     tabler = Tabler()
-    # tabler.create_table()
+    tabler.create_table()
     # tabler.add_player()
     # tabler.create_grid()
-    # tabler.add_team(name="seirin")
-    tabler.preview_grid()
+    # tabler.add_team(name="shutoku")
+    # tabler.fill_table()
