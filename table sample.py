@@ -24,7 +24,7 @@ class Example(QWidget):
         # зададим таблицу, с которой он будет работать,
         #  и выберем все данные
         model = QSqlTableModel(self, db)
-        model.setTable('repr')
+        model.setTable('tour1')
         model.select()
 
         # Для отображения данных на виджете

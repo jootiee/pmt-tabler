@@ -42,7 +42,7 @@ class Ui_Form_score_edit(object):
         self.layout_grid_scores.addWidget(self.button_save, 2, 2, 1, 1)
         self.combobox_tour = QtWidgets.QComboBox(self.gridLayoutWidget)
         self.combobox_tour.setObjectName("combobox_tour")
-        self.layout_grid_scores.addWidget(self.comboBox, 2, 0, 1, 1)
+        self.layout_grid_scores.addWidget(self.combobox_tour, 2, 0, 1, 1)
 
         self.teams = self.tabler.get_teams()
 
@@ -53,7 +53,7 @@ class Ui_Form_score_edit(object):
         self.combobox_team1.currentIndexChanged.connect(lambda: self.load_players(0))
         self.combobox_team2.currentIndexChanged.connect(lambda: self.load_players(1))
 
-        self.button_save.clicked.connect(self.save)
+        
 
         self.retranslateUi()
         QtCore.QMetaObject.connectSlotsByName(self.widget)
@@ -71,38 +71,48 @@ class Ui_Form_score_edit(object):
             for i in reversed(range(self.layout_form_team1.count())): 
                 self.layout_form_team1.itemAt(i).widget().deleteLater()
             self.players_1 = self.tabler.get_players(self.combobox_team1.currentIndex() + 1)
+            print(self.players_1)
             self.form1_fields = list()
             for index, player in enumerate(self.players_1):
                 self.form1_fields.append(QtWidgets.QSpinBox())
                 self.form1_fields[index].setMaximum(200)
-                self.form1_fields[index].setValue(player[2])
+                print(player)
+                self.form1_fields[index].setValue(player[2 + self.combobox_tour.currentIndex() + 1])
                 self.layout_form_team1.addRow(player[1] + ":", self.form1_fields[index])
 
         elif combobox == 1:
             for i in reversed(range(self.layout_form_team2.count())): 
                 self.layout_form_team2.itemAt(i).widget().deleteLater()
             self.players_2 = self.tabler.get_players(self.combobox_team2.currentIndex() + 1)
+            
             self.form2_fields = list()
             for index, player in enumerate(self.players_2):
                 self.form2_fields.append(QtWidgets.QSpinBox())
                 self.form2_fields[index].setMaximum(200)
-                self.form2_fields[index].setValue(player[2])
+                self.form2_fields[index].setValue(player[2 + self.combobox_tour.currentIndex() + 1])
                 self.layout_form_team2.addRow(player[1] + ":", self.form2_fields[index])
 
-    def save(self):
-        if self.players_1:
-            for index, player in enumerate(self.players_1):
-                self.tabler.change_score(player[0], int(self.form1_fields[index].value()))
-        if self.players_2:
-            for index, player in enumerate(self.players_2):
-                self.tabler.change_score(player[0], int(self.form2_fields[index].value()))
+    def save(self, function):
+        tour = self.combobox_tour.currentIndex() + 1
+        for player in self.players_1:
+            print(player)
+            score = self.form1_fields[self.players_1.index(player)].value()
+            self.tabler.change_score(player[0], self.players_2[0][2], player[2], score, tour)
+
+        for player in self.players_2:
+            print(player)
+            score = self.form2_fields[self.players_2.index(player)].value()
+            self.tabler.change_score(player[0], self.players_1[0][2], player[2], score, tour)
+
+
+        function()
         self.widget.close()
 
-# if __name__ == "__main__":
-#     import sys
-#     app = QtWidgets.QApplication(sys.argv)
-#     Widget = QtWidgets.QWidget()
-#     ui = Ui_Form_score_edit()
-#     ui.setupUi(Widget)
-#     Widget.show()
-#     sys.exit(app.exec_())
+if __name__ == "__main__":
+    import sys
+    app = QtWidgets.QApplication(sys.argv)
+    Widget = QtWidgets.QWidget()
+    ui = Ui_Form_score_edit()
+    ui.setupUi(Widget)
+    Widget.show()
+    sys.exit(app.exec_())
