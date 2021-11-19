@@ -3,50 +3,17 @@ import os
 
 
 class Tabler:
-    def __init__(self, path_tables="tables", path_table="table.db"):
-        self.path_tables = path_tables
-        if path_table:
-            self.path_table = os.path.join(self.path_tables, path_table)
-            self.con = sqlite3.connect(self.path_table)
-            self.cur = self.con.cursor()
-
-    def create_db(self):
-        paths_tables = list(filter(lambda x: "table" in x,
-                            os.listdir(self.path_tables)))
-        if paths_tables:
-            name = self.path_tables + "/"
-            number = ""
-            counter = False
-            for elem in sorted(paths_tables, key=lambda x: x[5], reverse=True)[0]:
-                if elem.isdigit():
-                    number += elem
-                    counter = True
-                else:
-                    if counter:
-                        counter = False
-                        name += str(int(number) + 1) + elem
-                    else:
-                        name += elem
-        else:
-            name = os.path.join(self.path_tables, "table1.db")
-        self.path_table = name
-        self.con = sqlite3.connect(self.path_table)
+    def __init__(self, path):
+        self.path = path
+        self.con = sqlite3.connect(self.path)
         self.cur = self.con.cursor()
 
+    def create_db(self):
         self.cur.execute("""
         CREATE TABLE grid(
         ID  INTEGER PRIMARY KEY AUTOINCREMENT
         )
         """)
-
-        # self.cur.execute("""
-        # CREATE TABLE sessions(
-        # ID  INTEGER PRIMARY KEY AUTOINCREMENT,
-        # TEAMS STRING,
-        # SCORE STRING, 
-        # TOUR INTEGER
-        # )
-        # """)
 
         self.cur.execute("""
         CREATE TABLE teams(
@@ -64,7 +31,6 @@ class Tabler:
         );
         """)
 
-
         self.cur.execute("""
         CREATE TABLE  scores(
         PLAYER INTEGER,
@@ -74,7 +40,7 @@ class Tabler:
         Tour INTEGER
         )""")
 
-    def add_team(self, name="unknown"):
+    def add_team(self, name):
         self.cur.execute(f"""
         INSERT INTO TEAMS(NAME) VALUES(?)
         """, (name, ))
@@ -129,18 +95,28 @@ class Tabler:
 
             self.con.commit()
 
-    def create_tour(self, tour=1):
-        try: 
+    def create_tour(self, tour=1, scores=None):
+        try:
             self.cur.execute("""
             DROP TABLE tour{}
             """.format(tour))
         except sqlite3.OperationalError:
             pass
 
-        rows = [row for row in
-                self.cur.execute("""
-        SELECT * FROM GRID
-        """)]
+        try:
+            self.cur.execute(f"""
+            ALTER TABLE PLAYERS ADD TOUR{tour} INTEGER DEFAULT 0;
+            """.format(tour))
+        except sqlite3.OperationalError:
+            pass
+
+        if scores:
+            rows = scores
+        else:
+            rows = [row for row in
+                    self.cur.execute("""
+            SELECT * FROM GRID
+            """)]
 
         teams = [team[0] for team in
                  self.cur.execute("""
@@ -148,7 +124,6 @@ class Tabler:
         """).fetchall()]
 
         cmd_teams = " STRING, ".join(teams) + " STRING"
-
         self.cur.execute("""
         CREATE TABLE tour{}(
         Team STRING, {}
@@ -173,18 +148,17 @@ class Tabler:
         self.con.commit()
 
     def get_teams(self):
-        teams = [elem[1] for elem in
+        teams = [elem[0] for elem in
                  self.cur.execute("""
-        SELECT ID, NAME FROM TEAMS
+        SELECT NAME FROM TEAMS
         """).fetchall()]
-
         return teams
 
     def get_players(self, team):
         players = [elem for elem in
                    self.cur.execute("""
-        SELECT * FROM PLAYERS WHERE TEAM LIKE {}
-        """.format(team)).fetchall()]
+        SELECT * FROM PLAYERS WHERE TEAM = ?
+        """, (team, )).fetchall()]
 
         return players
 
@@ -200,9 +174,9 @@ class Tabler:
         # SET TOUR{} = {}
         # WHERE ID = {}
         # """.format(str(tour), score2, player2))
-        
-        rows = [elem for elem in 
-        self.cur.execute("""
+
+        rows = [elem for elem in
+                self.cur.execute("""
         SELECT PLAYER, TEAM, AGAINST, TOUR FROM SCORES
         """).fetchall()]
         if (player, team, against, tour) in rows:
@@ -215,14 +189,33 @@ class Tabler:
             self.cur.execute("""
             INSERT INTO SCORES(PLAYER, TEAM, SCORE, AGAINST, TOUR) VALUES(?, ?, ?, ?, ?)
             """, (player, team, score, against, tour))
-        
+
+        player_scores = self.cur.execute("""
+        SELECT PLAYER, SCORE FROM SCORES
+        """).fetchall()
+
+        stats = dict()
+
+        for stat in player_scores:
+            try:
+                stats[stat[0]] += int(stat[1])
+            except KeyError:
+                stats[stat[0]] = int(stat[1])
+
+        # for player, score in stats.items():
+        #     self.cur.execute("""
+        #     UPDATE PLAYERS
+        #     SET SCORE = {}
+        #     WHERE
+        #     """)
+
         self.create_tour(tour=tour)
 
         self.con.commit()
 
     def get_tours(self):
-        tour = sorted(list(filter(lambda x: "tour" in x, [elem[0] for elem in self.cur.execute(
-            "SELECT name FROM sqlite_master WHERE type='table';").fetchall()])), key=lambda x: x[-1])
+        tour = sorted(list(filter(lambda x: "tour" in x, [elem[0].lower() for elem in self.cur.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'").fetchall()])), key=lambda x: x[-1])
         return tour
 
     def edit_team(self, id, name):
@@ -233,13 +226,12 @@ class Tabler:
         """, [name, id])
         self.con.commit()
 
-    def edit_player(self, id, name, team):
+    def edit_player(self, id, name):
         self.cur.execute("""
         UPDATE PLAYERS
-        SET NAME = ?,
-        SET TEAM = ?
+        SET NAME = ?
         WHERE ID = ?
-        """, [name, team, id])
+        """, [name, id])
         self.con.commit()
 
     def delete_team(self, id):
@@ -256,6 +248,11 @@ class Tabler:
         WHERE TEAM = ?
         """, [id])
 
+        self.cur.execute("""
+        DELETE FROM SCORES
+        WHERE TEAM = ? or AGAINST = ?
+        """, [id])
+
         self.con.commit()
 
         self.create_grid()
@@ -267,15 +264,71 @@ class Tabler:
         """, [id])
         self.con.commit()
 
+    def get_scores(self, tour):
+        res = [elem for elem in
+               self.cur.execute("""
+        SELECT TEAM, AGAINST, SCORE FROM SCORES WHERE TOUR LIKE ?
+        """, [tour])]
+
+        scores = dict()
+
+        for score in res:
+            try:
+                scores[score[:2]] = scores[score[:2]] + score[-1]
+            except KeyError:
+                scores[score[:2]] = score[-1]
+
+        grid = [list(elem) for elem in
+                self.cur.execute("""
+        SELECT * FROM TOUR{}
+        """.format(tour)).fetchall()]
+
+        sessions = dict()
+
+        for key, value in scores.items():
+            key = tuple(sorted(list(key)))
+
+            try:
+                sessions[key] = sessions[key] + " - " + str(value)
+            except KeyError:
+                sessions[key] = str(value)
+
+        for index_row, row in enumerate(grid):
+            for index_col, col in enumerate(row[1:]):
+                if (index_row + 1, index_col + 1) in scores.keys():
+                    if grid[index_row][index_col + 1] == "—":
+                        grid[index_row][index_col +
+                                        1] = scores[(index_row + 1, index_col + 1)]
+                    else:
+                        grid[index_row][index_col + 1] = str(int(grid[index_row][index_col + 1]) + int(
+                            scores[(index_row + 1, index_col + 1)]))
+
+        self.create_tour(tour=tour, scores=grid)
+
+    def get_team_id(self, name):
+        id = [elem[0] for elem in self.cur.execute(
+            """select id from teams where name = ?""", [name])][0]
+        return id
+
+
 
 
 if __name__ == "__main__":
     tabler = Tabler()
     # tabler.create_db()
     # tabler.add_player()
-    tabler.create_grid()
-    # tabler.add_team(name="shutoku")
     # tabler.create_grid()
-    tabler.create_tour(tour=1)
+    # tabler.add_team(name="alpha")
+    # tabler.add_team(name="beta")
+    # tabler.add_team(name="delta")
+    # tabler.add_team(name="gamma")
+    # tabler.add_team(name="sigma")
+
+    # tabler.create_grid()
+    # tabler.create_tour(tour=1)
+    tabler.create_tour(tour=2)
+    tabler.create_tour(tour=3)
     # tabler.delete_team(8)
     # tabler.delete_player(2)
+    # tabler.get_scores(1)
+    # tabler.get_teams()
