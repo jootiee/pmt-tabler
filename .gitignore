@@ -4,7 +4,7 @@ venv/
 debug.py
 main1.py
 .DS_Store
-tables/table*
+.qt_for_python/
 
 
 # Byte-compiled / optimized / DLL files
@@ -139,4 +139,5 @@ dmypy.json
 .DS_Store
 .gitignore
 tables/table2.db
+.DS_Store
 .DS_Store
