@@ -1,4 +1,4 @@
-import sqlite3
+﻿import sqlite3
 import os
 
 
@@ -315,20 +315,3 @@ class Tabler:
 
 if __name__ == "__main__":
     tabler = Tabler()
-    # tabler.create_db()
-    # tabler.add_player()
-    # tabler.create_grid()
-    # tabler.add_team(name="alpha")
-    # tabler.add_team(name="beta")
-    # tabler.add_team(name="delta")
-    # tabler.add_team(name="gamma")
-    # tabler.add_team(name="sigma")
-
-    # tabler.create_grid()
-    # tabler.create_tour(tour=1)
-    tabler.create_tour(tour=2)
-    tabler.create_tour(tour=3)
-    # tabler.delete_team(8)
-    # tabler.delete_player(2)
-    # tabler.get_scores(1)
-    # tabler.get_teams()

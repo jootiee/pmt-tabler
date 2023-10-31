@@ -1,4 +1,4 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+﻿from PyQt5 import QtCore, QtGui, QtWidgets
 from sql import *
 
 class Ui_Form_score_edit(object):
